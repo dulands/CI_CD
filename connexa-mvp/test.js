@@ -1,0 +1,1 @@
+//  ctrl shift i    pra usar o copilot

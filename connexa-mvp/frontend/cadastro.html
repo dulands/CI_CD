@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadastro de Usuário - Connexa</title>
+  <style>
+    :root {
+      --azul: #007bff;
+      --branco: #fff;
+      --erro: #dc3545;
+      --sucesso: #28a745;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--branco);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: var(--branco);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+    h2 {
+      color: var(--azul);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+      color: #222;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: var(--azul);
+      outline: none;
+    }
+    .erro {
+      color: var(--erro);
+      font-size: 0.95rem;
+      margin-top: -0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .sucesso {
+      color: var(--sucesso);
+      font-size: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    button {
+      width: 100%;
+      background: var(--azul);
+      color: var(--branco);
+      border: none;
+      padding: 0.8rem;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:disabled {
+      background: #6cb2ff;
+      cursor: not-allowed;
+    }
+    @media (max-width: 500px) {
+      .container {
+        padding: 1rem 0.5rem;
+        max-width: 98vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Cadastro de Usuário</h2>
+    <form id="cadastroForm" novalidate>
+      <label for="nome">Nome completo</label>
+      <input type="text" id="nome" name="nome" required autocomplete="name" />
+      <div class="erro" id="erro-nome"></div>
+
+      <label for="email">E-mail institucional</label>
+      <input type="email" id="email" name="email" required autocomplete="email" />
+      <div class="erro" id="erro-email"></div>
+
+      <label for="curso">Curso</label>
+      <input type="text" id="curso" name="curso" required />
+      <div class="erro" id="erro-curso"></div>
+
+      <label for="periodo">Período/Semestre</label>
+      <input type="text" id="periodo" name="periodo" required />
+      <div class="erro" id="erro-periodo"></div>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required autocomplete="new-password" />
+      <div class="erro" id="erro-senha"></div>
+
+      <button type="submit" id="btnCadastrar">Cadastrar</button>
+      <div class="sucesso" id="mensagem-sucesso"></div>
+      <div class="erro" id="mensagem-erro"></div>
+    </form>
+  </div>
+  <script>
+    // Configurações
+    const DOMINIO_EMAIL = '@universidade.edu';
+    const SENHA_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+    const form = document.getElementById('cadastroForm');
+    const btnCadastrar = document.getElementById('btnCadastrar');
+    const campos = ['nome', 'email', 'curso', 'periodo', 'senha'];
+
+    function validarCampo(campo) {
+      const valor = document.getElementById(campo).value.trim();
+      let erro = '';
+      if (!valor) {
+        erro = 'Campo obrigatório.';
+      } else if (campo === 'email' && !valor.endsWith(DOMINIO_EMAIL)) {
+        erro = 'O e-mail deve ser institucional (' + DOMINIO_EMAIL + ')';
+      } else if (campo === 'senha' && !SENHA_REGEX.test(valor)) {
+        erro = 'A senha deve ter no mínimo 8 caracteres, incluindo uma maiúscula, uma minúscula e um número.';
+      }
+      document.getElementById('erro-' + campo).textContent = erro;
+      return !erro;
+    }
+
+    campos.forEach(campo => {
+      document.getElementById(campo).addEventListener('input', () => validarCampo(campo));
+    });
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      let valido = true;
+      campos.forEach(campo => {
+        if (!validarCampo(campo)) valido = false;
+      });
+      if (!valido) return;
+
+      btnCadastrar.disabled = true;
+      btnCadastrar.textContent = 'Enviando...';
+      document.getElementById('mensagem-sucesso').textContent = '';
+      document.getElementById('mensagem-erro').textContent = '';
+
+      const dados = {
+        nome: form.nome.value.trim(),
+        email: form.email.value.trim(),
+        curso: form.curso.value.trim(),
+        periodo: form.periodo.value.trim(),
+        senha: form.senha.value
+      };
+
+      try {
+        const resp = await fetch('/api/usuarios/cadastro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        const resultado = await resp.json();
+        if (resp.ok) {
+          document.getElementById('mensagem-sucesso').textContent = resultado.mensagem || 'Cadastro realizado com sucesso!';
+          form.reset();
+        } else {
+          document.getElementById('mensagem-erro').textContent = resultado.erro || 'Erro ao cadastrar.';
+        }
+      } catch (err) {
+        document.getElementById('mensagem-erro').textContent = 'Erro de conexão com o servidor.';
+      } finally {
+        btnCadastrar.disabled = false;
+        btnCadastrar.textContent = 'Cadastrar';
+      }
+    });
+  </script>
+</body>
+</html>
