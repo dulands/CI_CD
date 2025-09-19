@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Connexa</title>
+  <style>
+    :root {
+      --azul: #007bff;
+      --branco: #fff;
+      --erro: #dc3545;
+      --sucesso: #28a745;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--branco);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: var(--branco);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 2rem 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+    h2 {
+      color: var(--azul);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+      color: #222;
+    }
+    input {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: var(--azul);
+      outline: none;
+    }
+    .erro {
+      color: var(--erro);
+      font-size: 0.95rem;
+      margin-top: -0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .sucesso {
+      color: var(--sucesso);
+      font-size: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    button {
+      width: 100%;
+      background: var(--azul);
+      color: var(--branco);
+      border: none;
+      padding: 0.8rem;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:disabled {
+      background: #6cb2ff;
+      cursor: not-allowed;
+    }
+    @media (max-width: 500px) {
+      .container {
+        padding: 1rem 0.5rem;
+        max-width: 98vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Login</h2>
+    <form id="loginForm" novalidate>
+      <label for="email">E-mail institucional</label>
+      <input type="email" id="email" name="email" required autocomplete="email" />
+      <div class="erro" id="erro-email"></div>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required autocomplete="current-password" />
+      <div class="erro" id="erro-senha"></div>
+
+      <button type="submit" id="btnLogin">Entrar</button>
+      <div class="sucesso" id="mensagem-sucesso"></div>
+      <div class="erro" id="mensagem-erro"></div>
+    </form>
+  </div>
+  <script>
+    const DOMINIO_EMAIL = '@universidade.edu';
+    const SENHA_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    const form = document.getElementById('loginForm');
+    const btnLogin = document.getElementById('btnLogin');
+
+    function validarEmail() {
+      const email = form.email.value.trim();
+      let erro = '';
+      if (!email) {
+        erro = 'Campo obrigatório.';
+      } else if (!email.endsWith(DOMINIO_EMAIL)) {
+        erro = 'O e-mail deve ser institucional (' + DOMINIO_EMAIL + ')';
+      }
+      document.getElementById('erro-email').textContent = erro;
+      return !erro;
+    }
+    function validarSenha() {
+      const senha = form.senha.value;
+      let erro = '';
+      if (!senha) {
+        erro = 'Campo obrigatório.';
+      } else if (!SENHA_REGEX.test(senha)) {
+        erro = 'A senha deve ter no mínimo 8 caracteres, incluindo uma maiúscula, uma minúscula e um número.';
+      }
+      document.getElementById('erro-senha').textContent = erro;
+      return !erro;
+    }
+    form.email.addEventListener('input', validarEmail);
+    form.senha.addEventListener('input', validarSenha);
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const emailValido = validarEmail();
+      const senhaValida = validarSenha();
+      if (!emailValido || !senhaValida) return;
+
+      btnLogin.disabled = true;
+      btnLogin.textContent = 'Entrando...';
+      document.getElementById('mensagem-sucesso').textContent = '';
+      document.getElementById('mensagem-erro').textContent = '';
+
+      const dados = {
+        email: form.email.value.trim(),
+        senha: form.senha.value
+      };
+      try {
+        const resp = await fetch('http://localhost:3001/api/usuarios/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        const resultado = await resp.json();
+        if (resp.ok) {
+          document.getElementById('mensagem-sucesso').textContent = resultado.mensagem || 'Login realizado com sucesso!';
+          // Redirecionar para dashboard após 1s
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1000);
+        } else {
+          document.getElementById('mensagem-erro').textContent = resultado.erro || 'Erro ao fazer login.';
+        }
+      } catch (err) {
+        document.getElementById('mensagem-erro').textContent = 'Erro de conexão com o servidor.';
+      } finally {
+        btnLogin.disabled = false;
+        btnLogin.textContent = 'Entrar';
+      }
+    });
+  </script>
+</body>
+</html>
