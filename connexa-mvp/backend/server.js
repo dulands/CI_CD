@@ -26,6 +26,62 @@ const db = new sqlite3.Database('../database/connexa.db', (err) => {
     });
   }
 });
+    // Criação da tabela de grupos (se não existir)
+    db.run(`CREATE TABLE IF NOT EXISTS grupos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL UNIQUE,
+      materia TEXT NOT NULL,
+      descricao TEXT NOT NULL,
+      limite INTEGER NOT NULL,
+      criador_id INTEGER,
+      FOREIGN KEY (criador_id) REFERENCES usuarios(id)
+    )`);
+
+    // Middleware body-parser deve vir antes de todos os endpoints
+    app.use(bodyParser.json());
+
+    // Endpoint para criar grupo de estudo
+    app.post('/api/grupos/criar', (req, res) => {
+      console.log('req.body recebido:', req.body);
+      const { nome, materia, descricao, limite } = req.body;
+      if (!nome || !materia || !descricao || !limite) {
+        return res.status(400).json({ erro: 'Todos os campos são obrigatórios.' });
+      }
+      if (typeof limite !== 'number' || limite < 2 || limite > 20) {
+        return res.status(400).json({ erro: 'O limite de participantes deve ser entre 2 e 20.' });
+      }
+      // Verifica se já existe grupo com o mesmo nome
+      db.get('SELECT * FROM grupos WHERE nome = ?', [nome], (err, grupo) => {
+        if (err) {
+          console.error('Erro ao consultar grupo:', err);
+          return res.status(500).json({ erro: 'Erro interno ao consultar grupo.' });
+        }
+        if (grupo) {
+          return res.status(400).json({ erro: 'Já existe um grupo com esse nome.' });
+        }
+        // Para este exemplo, não temos autenticação, então criador_id será null
+        db.run('INSERT INTO grupos (nome, materia, descricao, limite, criador_id) VALUES (?, ?, ?, ?, ?)',
+          [nome, materia, descricao, limite, null], function(err) {
+            if (err) {
+              console.error('Erro ao criar grupo:', err);
+              return res.status(500).json({ erro: 'Erro ao criar grupo.' });
+            }
+            // Aqui, normalmente, adicionaríamos o criador como admin em uma tabela de membros
+            return res.status(201).json({ mensagem: 'Grupo criado com sucesso!' });
+          });
+      });
+    });
+
+// Endpoint para listar grupos de estudo
+app.get('/api/grupos/listar', (req, res) => {
+  db.all('SELECT id, nome, materia, descricao, limite FROM grupos', [], (err, rows) => {
+    if (err) {
+      console.error('Erro ao listar grupos:', err);
+      return res.status(500).json({ erro: 'Erro ao listar grupos.' });
+    }
+    return res.status(200).json({ grupos: rows });
+  });
+});
 
 app.use(bodyParser.json());
 

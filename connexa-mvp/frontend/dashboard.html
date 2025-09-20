@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Connexa</title>
+  <style>
+    :root {
+      --azul: #007bff;
+      --branco: #fff;
+      --erro: #dc3545;
+      --sucesso: #28a745;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--branco);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--azul);
+      color: var(--branco);
+      padding: 1rem 2rem;
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      margin: 2rem auto;
+      background: var(--branco);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 2rem 1.5rem;
+    }
+    h2 {
+      color: var(--azul);
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: bold;
+      color: #222;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--azul);
+      outline: none;
+    }
+    .erro {
+      color: var(--erro);
+      font-size: 0.95rem;
+      margin-top: -0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .sucesso {
+      color: var(--sucesso);
+      font-size: 1rem;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    button {
+      width: 100%;
+      background: var(--azul);
+      color: var(--branco);
+      border: none;
+      padding: 0.8rem;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:disabled {
+      background: #6cb2ff;
+      cursor: not-allowed;
+    }
+    .dashboard-flex {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      margin: 2rem auto;
+      max-width: 1100px;
+    }
+    .grupos-lista, .criar-grupo {
+      background: var(--branco);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      padding: 2rem 1.5rem;
+      min-width: 320px;
+      flex: 1 1 350px;
+      box-sizing: border-box;
+    }
+    .grupos-lista ul {
+      list-style: none;
+      padding: 0;
+    }
+    .grupos-lista li {
+      margin-bottom: 1.2rem;
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: 0.8rem 1rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    @media (max-width: 900px) {
+      .dashboard-flex {
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 98vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dashboard Connexa</h1>
+  </header>
+  <div class="container">
+    <div class="dashboard-flex">
+      <section class="grupos-lista">
+        <h2>Grupos de Estudo Existentes</h2>
+        <ul id="listaGrupos" style="margin-bottom:2rem;"></ul>
+      </section>
+      <section class="criar-grupo">
+        <h2>Criar Grupo de Estudo</h2>
+        <form id="grupoForm" novalidate>
+          <label for="nome">Nome do grupo</label>
+          <input type="text" id="nome" name="nome" required />
+          <div class="erro" id="erro-nome"></div>
+
+          <label for="materia">Matéria</label>
+          <input type="text" id="materia" name="materia" required />
+          <div class="erro" id="erro-materia"></div>
+
+          <label for="descricao">Descrição</label>
+          <textarea id="descricao" name="descricao" rows="3" required></textarea>
+          <div class="erro" id="erro-descricao"></div>
+
+          <label for="limite">Limite de participantes</label>
+          <input type="number" id="limite" name="limite" min="2" max="20" required />
+          <div class="erro" id="erro-limite"></div>
+
+          <button type="submit" id="btnCriar">Criar Grupo</button>
+          <div class="sucesso" id="mensagem-sucesso"></div>
+          <div class="erro" id="mensagem-erro"></div>
+        </form>
+      </section>
+    </div>
+  </div>
+  <script>
+    const form = document.getElementById('grupoForm');
+    const btnCriar = document.getElementById('btnCriar');
+    const listaGrupos = document.getElementById('listaGrupos');
+
+    async function carregarGrupos() {
+      listaGrupos.innerHTML = '<li>Carregando grupos...</li>';
+      try {
+        const resp = await fetch('http://localhost:3001/api/grupos/listar');
+        const data = await resp.json();
+        if (resp.ok && data.grupos && data.grupos.length > 0) {
+          listaGrupos.innerHTML = data.grupos.map(g =>
+            `<li><strong>${g.nome}</strong> (${g.materia})<br><small>${g.descricao}</small><br>Limite: ${g.limite}</li>`
+          ).join('');
+        } else {
+          listaGrupos.innerHTML = '<li>Nenhum grupo cadastrado ainda.</li>';
+        }
+      } catch (err) {
+        listaGrupos.innerHTML = '<li>Erro ao carregar grupos.</li>';
+      }
+    }
+
+    carregarGrupos();
+
+    function validarCampo(id, condicao, mensagem) {
+      const erroDiv = document.getElementById('erro-' + id);
+      if (!condicao) {
+        erroDiv.textContent = mensagem;
+        return false;
+      } else {
+        erroDiv.textContent = '';
+        return true;
+      }
+    }
+
+    form.nome.addEventListener('input', () => validarCampo('nome', form.nome.value.trim().length > 0, 'Campo obrigatório.'));
+    form.materia.addEventListener('input', () => validarCampo('materia', form.materia.value.trim().length > 0, 'Campo obrigatório.'));
+    form.descricao.addEventListener('input', () => validarCampo('descricao', form.descricao.value.trim().length > 0, 'Campo obrigatório.'));
+    form.limite.addEventListener('input', () => {
+      const val = parseInt(form.limite.value, 10);
+      validarCampo('limite', val >= 2 && val <= 20, 'Limite entre 2 e 20.');
+    });
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      let valido = true;
+      valido &= validarCampo('nome', form.nome.value.trim().length > 0, 'Campo obrigatório.');
+      valido &= validarCampo('materia', form.materia.value.trim().length > 0, 'Campo obrigatório.');
+      valido &= validarCampo('descricao', form.descricao.value.trim().length > 0, 'Campo obrigatório.');
+      const limiteVal = parseInt(form.limite.value, 10);
+      valido &= validarCampo('limite', limiteVal >= 2 && limiteVal <= 20, 'Limite entre 2 e 20.');
+      if (!valido) return;
+
+      btnCriar.disabled = true;
+      btnCriar.textContent = 'Enviando...';
+      document.getElementById('mensagem-sucesso').textContent = '';
+      document.getElementById('mensagem-erro').textContent = '';
+
+      const dados = {
+        nome: form.nome.value.trim(),
+        materia: form.materia.value.trim(),
+        descricao: form.descricao.value.trim(),
+        limite: limiteVal
+      };
+
+      try {
+        const resp = await fetch('http://localhost:3001/api/grupos/criar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dados)
+        });
+        const resultado = await resp.json();
+        if (resp.ok) {
+          document.getElementById('mensagem-sucesso').textContent = resultado.mensagem || 'Grupo criado com sucesso!';
+          form.reset();
+          carregarGrupos();
+        } else {
+          document.getElementById('mensagem-erro').textContent = resultado.erro || 'Erro ao criar grupo.';
+        }
+      } catch (err) {
+        document.getElementById('mensagem-erro').textContent = 'Erro de conexão com o servidor.';
+      } finally {
+        btnCriar.disabled = false;
+        btnCriar.textContent = 'Criar Grupo';
+      }
+    });
+  </script>
+</body>
+</html>
